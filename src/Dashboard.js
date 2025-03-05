@@ -3,6 +3,7 @@ import { auth, db } from "./firebase";
 import { collection, doc, getDocs, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { Link } from "react-router-dom";
+import TextareaAutosize from "react-textarea-autosize";
 
 const Dashboard = () => {
   const [email, setEmail] = useState("");
@@ -10,6 +11,7 @@ const Dashboard = () => {
   const [patients, setPatients] = useState([]);
   const [doctorId, setDoctorId] = useState(null);
   const [confirmationLink, setConfirmationLink] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
 
   // ✅ Persist Authentication Across Refreshes
   useEffect(() => {
@@ -23,7 +25,6 @@ const Dashboard = () => {
         setDoctorId(null);
       }
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -80,6 +81,7 @@ const Dashboard = () => {
   const addPatient = async () => {
     if (!email || !doctorId) return;
 
+    setEmailLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
 
@@ -90,7 +92,7 @@ const Dashboard = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${idToken}`,
+            Authorization: `Bearer ${idToken}`,
           },
           body: JSON.stringify({ doctorId, patientEmail: email }),
         }
@@ -110,13 +112,15 @@ const Dashboard = () => {
     } catch (error) {
       setMessage("Error: " + error.message);
       console.error("❌ Error adding patient:", error);
+    } finally {
+      setEmailLoading(false);
     }
   };
 
   // ✅ Construct Email Template on Frontend
   const emailTemplate = confirmationLink
     ? `Subject: Confirm Doctor Access to Your TicVision Data
-    
+
 Hello,
 
 A doctor would like to add you as a patient on TicVision to track your tic history and provide better insights.
@@ -127,7 +131,7 @@ ${confirmationLink}
 
 If you did not request this, you can ignore this message.
 
-Best,  
+Best,
 TicVision Team`
     : "";
 
@@ -145,72 +149,127 @@ TicVision Team`
   };
 
   return (
-    <div className="container mt-5">
-      <h2>Doctor's Dashboard</h2>
+    <div className="max-w-5xl mx-auto p-4">
+      <h2 className="text-3xl font-bold mb-6">Doctor&apos;s Dashboard</h2>
 
       {/* ✅ Add Patient Input */}
-      <input
-        type="email"
-        className="form-control mb-2"
-        placeholder="Enter patient email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <button className="btn btn-primary" onClick={addPatient}>
-        Add Patient
-      </button>
-      <button className="btn btn-secondary ms-2" onClick={() => fetchPatients()}>
-        Refresh List
-      </button>
-      {message && <p className="mt-3">{message}</p>}
+      <div className="mb-4">
+        <input
+          type="email"
+          className="w-full border border-gray-300 p-3 rounded mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="Enter patient email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <div className="flex space-x-3">
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            onClick={addPatient}
+          >
+            Add Patient
+          </button>
+          <button
+            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+            onClick={() => fetchPatients()}
+          >
+            Refresh List
+          </button>
+        </div>
+        {message && <p className="mt-3 text-green-600">{message}</p>}
+      </div>
 
       {/* ✅ Display Email Confirmation Template */}
-      {confirmationLink && (
-        <div className="mt-4 p-3 border rounded bg-light">
-          <h5>Confirmation Email:</h5>
-          <textarea
-            className="form-control mb-2"
-            rows="5"
+      {emailLoading ? (
+        <div className="mt-4 p-4 border border-gray-200 rounded bg-gray-50 flex items-center justify-center">
+          <svg
+            className="animate-spin h-6 w-6 text-blue-500 mr-2"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            ></path>
+          </svg>
+          <span className="text-blue-500 font-medium">Generating email template...</span>
+        </div>
+      ) : confirmationLink ? (
+        <div className="mt-4 p-4 border rounded bg-gray-50">
+          <h5 className="text-lg font-semibold mb-2">Confirmation Email:</h5>
+          <TextareaAutosize
+            className="w-full border border-gray-300 p-3 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
             value={emailTemplate}
             readOnly
           />
-          <button className="btn btn-outline-primary me-2" onClick={copyToClipboard}>
-            Copy
-          </button>
-          <button className="btn btn-outline-secondary" onClick={sendViaEmail}>
-            Send via Email
-          </button>
+          <div className="flex space-x-3 mt-2">
+            <button
+              className="border border-blue-500 text-blue-500 px-4 py-2 rounded hover:bg-blue-50 transition-colors duration-200"
+              onClick={copyToClipboard}
+            >
+              Copy
+            </button>
+            <button
+              className="border border-gray-500 text-gray-500 px-4 py-2 rounded hover:bg-gray-50 transition-colors duration-200"
+              onClick={sendViaEmail}
+            >
+              Send via Email
+            </button>
+          </div>
         </div>
-      )}
+      ) : null}
 
       {/* ✅ Display Patients Table */}
-      <h3 className="mt-5">Patients List</h3>
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Patient Name</th>
-            <th>Tic Counter</th>
-          </tr>
-        </thead>
-        <tbody>
-          {patients.length > 0 ? (
-            patients.map((patient) => (
-              <tr key={patient.id}>
-                <td>
-                  <Link to={`/patients/${patient.id}`} className="text-primary">
-                    {patient.displayName}
-                  </Link>
-                </td>
-                <td>{patient.ticCounter}</td>
-              </tr>
-            ))
-          ) : (
+      <h3 className="mt-8 text-2xl font-semibold">Patients List</h3>
+      <div className="mt-4 shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
             <tr>
-              <td colSpan="2" className="text-center">No patients added yet</td>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Patient Name
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Tic Counter
+              </th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {patients.length > 0 ? (
+              patients.map((patient) => (
+                <tr key={patient.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Link to={`/patients/${patient.id}`} className="text-gray-600 hover:underline">
+                      {patient.displayName}
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{patient.ticCounter}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="2" className="px-6 py-4 text-center text-gray-500">
+                  No patients added yet
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
