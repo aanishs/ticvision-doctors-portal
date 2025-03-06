@@ -99,7 +99,7 @@ const Dashboard = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        throw new Error(`User with given email not found`);
       }
 
       const result = await response.json();
@@ -232,17 +232,17 @@ TicVision Team`
       <h3 className="mt-8 text-2xl font-semibold">Patients List</h3>
       <div className="mt-4 shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-100">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider"
               >
                 Patient Name
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider"
               >
                 Tic Counter
               </th>
